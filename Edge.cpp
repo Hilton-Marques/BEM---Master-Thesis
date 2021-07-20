@@ -5,7 +5,7 @@
 #include "Edge.h"
 
 Edge::Edge() {
-
+ int a = 1;
 }
 Edge::Edge(int id)
 {
