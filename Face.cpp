@@ -5,6 +5,7 @@
 #include <algorithm> // find function
 #include <iostream>
 #include "Face.h"
+#include <set> // erase duplicates
 
 
 Face::Face() {
@@ -49,16 +50,20 @@ std::vector<Face*> Face::getAdjacentElements(bool flag)
             }
             //int newId = hed->m_elId;
             Face* element = hed->m_el;
-            if (std::find(adjacentElements.begin(), adjacentElements.end(), element) == adjacentElements.end())
+            adjacentElements.push_back(element);
+      /*      if (std::find(adjacentElements.begin(), adjacentElements.end(), element) == adjacentElements.end())
             {
                 adjacentElements.push_back(element);               
-            }
+            }*/
             hed = hed->m_edge->getTwin(hed->m_id)->m_heNext;
         }
    
     }
     //m_adjacentFaces = adjacentElements;
     adjacentElements.push_back(this);
+    // erase duplicates
+    std::set<Face*> s(adjacentElements.begin(), adjacentElements.end());
+    adjacentElements.assign(s.begin(), s.end());
     return adjacentElements;
 }
 
@@ -488,6 +493,38 @@ Matrix Face::exactIntH(Vertex* source)
 std::vector<Face*> Face::getChildrenElement()
 {
   return std::vector<Face*> {m_childrenElement[0], m_childrenElement[1], m_childrenElement[2], m_childrenElement[3]};
+}
+
+double Face::getRadius()
+{
+    Point L1 = m_points[1]->m_coord - m_points[0]->m_coord;
+    Point L2 = m_points[2]->m_coord - m_points[0]->m_coord;
+    Point L3 = m_points[2]->m_coord - m_points[1]->m_coord;
+    double L12 = L1 * L1;
+    double L22 = L2 * L2;
+    double L32 = L3 * L3;
+    if (L12 >= L22)
+    {
+        if (L12 >= L32)
+        {
+            return L12;
+        }
+        else
+        {
+            return L32;
+        }
+    }
+    else
+    {
+        if (L22 >= L32)
+        {
+            return L22;
+        }
+        else
+        {
+            return L32;
+        }
+    }
 }
 
 Face::~Face()

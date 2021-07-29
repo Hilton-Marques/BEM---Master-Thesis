@@ -334,14 +334,8 @@ Matrix FMM::computeBvector(double& erro)
 					Face* element = elements[j];
 
 					//already evaluate FMM delivery downward pass
-					std::vector<Face*> adjacentElementsMother = element->getAdjacentElements();
-					std::vector<Face*> adjacentElementsChildren;
-					adjacentElementsChildren.reserve(4 * adjacentElementsMother.size());
-					for (Face* adj : adjacentElementsMother)
-					{
-						adjacentElementsChildren.insert(adjacentElementsChildren.end(), std::begin(adj->m_childrenElement), std::end(adj->m_childrenElement));
-					}
-					std::vector<Vertex*> leafPoints = getLeafNodesFromElements(adjacentElementsChildren);
+					std::vector<Face*> adjacentElementsMother = element->getAdjacentElements();				
+					std::vector<Vertex*> leafPoints = getLeafNodesFromElements(adjacentElementsMother);
 					std::sort(leafPoints.begin(), leafPoints.end());
 
 					for (Face* child : element->m_childrenElement)
@@ -371,14 +365,8 @@ Matrix FMM::computeBvector(double& erro)
 					Face* element = elements[j];
 
 					//already evaluate FMM delivery downward pass
-					std::vector<Face*> adjacentElementsMother = element->getAdjacentElements();
-					std::vector<Face*> adjacentElementsChildren;
-					adjacentElementsChildren.reserve(4 * adjacentElementsMother.size());
-					for (Face* adj : adjacentElementsMother)
-					{
-						adjacentElementsChildren.insert(adjacentElementsChildren.end(), std::begin(adj->m_childrenElement), std::end(adj->m_childrenElement));
-					}
-					std::vector<Vertex*> leafPoints = getLeafNodesFromElements(adjacentElementsChildren);
+					std::vector<Face*> adjacentElementsMother = element->getAdjacentElements();					
+					std::vector<Vertex*> leafPoints = getLeafNodesFromElements(adjacentElementsMother);
 					std::sort(leafPoints.begin(), leafPoints.end());
 
 					for (Face* child : element->m_childrenElement)

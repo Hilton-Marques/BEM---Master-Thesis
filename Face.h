@@ -70,6 +70,7 @@ public:
     Matrix exactIntG(Vertex* source);
     Matrix exactIntH(Vertex* source);
     std::vector<Face*> getChildrenElement();
+    double getRadius();
 
     ~Face();
 

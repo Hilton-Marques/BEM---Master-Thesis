@@ -13,6 +13,8 @@
 #include <iostream>
 #include <fstream>
 #include <string>
+#include <algorithm> // set_difference
+#include <set> // erase duplicates
 
 
 
@@ -51,6 +53,8 @@ void buildMotherMesh(std::vector<Vertex*>& vertices,
     for (int j = 0; j < 3; j++)
     {
       hedsFace[j]->m_heNext = hedsFace[(j + 1) % 3];
+      hedsFace[j]->m_el = facei;
+      facei->m_points[j] = hedsFace[j]->getP0();
     }
     elements[i] = facei;
   }
@@ -78,8 +82,39 @@ void buildMotherMesh(std::vector<Vertex*>& vertices,
     }
   }
 }
+
+void BuildConcaveAdjacency(std::vector<Face*>& elements)
+{
+    std::sort(elements.begin(), elements.end());
+    for (Face* element : elements)
+    {
+        std::vector<Face*> posible_concaveAdjacency;
+        std::vector<Face*> concaveAdjacency;
+        std::vector<Face*> convexAdjacency = element->getAdjacentElements();
+        std::sort(convexAdjacency.begin(), convexAdjacency.end());
+
+        std::set_difference(elements.begin(), elements.end(), convexAdjacency.begin(), convexAdjacency.end(), std::inserter(posible_concaveAdjacency, posible_concaveAdjacency.begin()));
+        double radius2 = element->getRadius();
+        for (int i = 0; i < 3; i++)
+        {
+            Point center = element->m_points[i]->m_coord;
+            for (Face* element_j : posible_concaveAdjacency)
+            {
+                Point d = element_j->getYc() - center;
+                if ( (d * d) < radius2 )
+                {
+                    concaveAdjacency.push_back(element_j);
+                }
+            }
+        }
+        // erase duplicates
+        std::set<Face*> s(concaveAdjacency.begin(), concaveAdjacency.end());
+        concaveAdjacency.assign(s.begin(), s.end());
+
+    }
+}
 int main() {
-    std::string fileName = "entradaTetra.txt";
+    std::string fileName = "entradaConcave.txt";
     std::vector<Point> coords;
     std::vector<std::vector<int>> inc;
     ReadInput input(fileName, coords, inc);
@@ -94,6 +129,7 @@ int main() {
     std::vector<HalfEdge*> heds;
     std::vector<Vertex*> vertexsBd(1);
     buildMotherMesh(vertexs, edges, elements, heds, coords, inc);
+    BuildConcaveAdjacency(elements);
     // start FMM
     int nL = 5;
     Solid solid(vertexs, edges, heds, elements, nL, vertexsBd);
