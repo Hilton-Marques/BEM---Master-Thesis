@@ -83,22 +83,23 @@ void buildMotherMesh(std::vector<Vertex*>& vertices,
   }
 }
 
-void BuildConcaveAdjacency(std::vector<Face*>& elements)
+void BuildConcaveAdjacency(std::vector<Face*>& elements, double fac)
 {
     std::sort(elements.begin(), elements.end());
     for (Face* element : elements)
     {
-        std::vector<Face*> posible_concaveAdjacency;
         std::vector<Face*> concaveAdjacency;
-        std::vector<Face*> convexAdjacency = element->getAdjacentElements();
-        std::sort(convexAdjacency.begin(), convexAdjacency.end());
+        //std::vector<Face*> convexAdjacency = element->getAdjacentElements();
+        //std::sort(convexAdjacency.begin(), convexAdjacency.end());
+        //std::set_difference(elements.begin(), elements.end(), convexAdjacency.begin(), convexAdjacency.end(), std::inserter(posible_concaveAdjacency, posible_concaveAdjacency.begin()));
+        
+        //element->buildConcaveAdjacency(elements,fac);
 
-        std::set_difference(elements.begin(), elements.end(), convexAdjacency.begin(), convexAdjacency.end(), std::inserter(posible_concaveAdjacency, posible_concaveAdjacency.begin()));
-        double radius2 = element->getRadius();
+        double radius2 = element->getRadius(fac);
         for (int i = 0; i < 3; i++)
         {
             Point center = element->m_points[i]->m_coord;
-            for (Face* element_j : posible_concaveAdjacency)
+            for (Face* element_j : elements)
             {
                 Point d = element_j->getYc() - center;
                 if ( (d * d) < radius2 )
@@ -110,6 +111,7 @@ void BuildConcaveAdjacency(std::vector<Face*>& elements)
         // erase duplicates
         std::set<Face*> s(concaveAdjacency.begin(), concaveAdjacency.end());
         concaveAdjacency.assign(s.begin(), s.end());
+        element->m_concave_adjacency = concaveAdjacency;
 
     }
 }
@@ -128,16 +130,20 @@ int main() {
     std::vector<Edge*> edges;
     std::vector<HalfEdge*> heds;
     std::vector<Vertex*> vertexsBd(1);
+    double concave_fac_radius = 0.7;
     buildMotherMesh(vertexs, edges, elements, heds, coords, inc);
-    BuildConcaveAdjacency(elements);
+    BuildConcaveAdjacency(elements, concave_fac_radius);
     // start FMM
-    int nL = 5;
-    Solid solid(vertexs, edges, heds, elements, nL, vertexsBd);
+    int nL = 4;
+    bool concave_allow = false;
+    
+    Solid solid(vertexs, edges, heds, elements, nL, vertexsBd, concave_allow, concave_fac_radius);
     // Level
 
-    int N = 3; // truncation term
+    int N = 10; // truncation term
     int NG = 10; // gauss quadrature
     int Nc = 2; // level of adjacency
+
     FMM fmm( & solid, N, NG, Nc, 0);
 
     return 0;

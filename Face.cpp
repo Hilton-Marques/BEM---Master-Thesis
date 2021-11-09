@@ -23,6 +23,7 @@ Face::Face(int cHedInc, double q[] , short int level) {
       m_q[2] = q[2];
       m_bd = true;
     }
+    //m_concave_adjacency.reserve(100);
 
     //getIdcPoints(heds);
 
@@ -61,9 +62,13 @@ std::vector<Face*> Face::getAdjacentElements(bool flag)
     }
     //m_adjacentFaces = adjacentElements;
     adjacentElements.push_back(this);
-    // erase duplicates
+    //// add concave elements
+    //adjacentElements.insert(adjacentElements.end(), m_concave_adjacency.begin(), m_concave_adjacency.end());
+    //// erase duplicates
     std::set<Face*> s(adjacentElements.begin(), adjacentElements.end());
     adjacentElements.assign(s.begin(), s.end());
+    //if (!m_concave_adjacency.empty())
+    //    int a = 1;
     return adjacentElements;
 }
 
@@ -495,14 +500,14 @@ std::vector<Face*> Face::getChildrenElement()
   return std::vector<Face*> {m_childrenElement[0], m_childrenElement[1], m_childrenElement[2], m_childrenElement[3]};
 }
 
-double Face::getRadius()
+double Face::getRadius(double fac )
 {
     Point L1 = m_points[1]->m_coord - m_points[0]->m_coord;
     Point L2 = m_points[2]->m_coord - m_points[0]->m_coord;
     Point L3 = m_points[2]->m_coord - m_points[1]->m_coord;
-    double L12 = L1 * L1;
-    double L22 = L2 * L2;
-    double L32 = L3 * L3;
+    double L12 = (fac * fac) * L1 * L1;
+    double L22 = (fac * fac) * L2 * L2;
+    double L32 = (fac * fac) * L3 * L3;    
     if (L12 >= L22)
     {
         if (L12 >= L32)
@@ -525,6 +530,43 @@ double Face::getRadius()
             return L32;
         }
     }
+}
+
+void Face::buildConcaveAdjacency(std::vector<Face*>& range_elements, double fac)
+{
+    double radius2 = getRadius(fac);
+    int n = range_elements.size();
+    //m_concave_adjacency.reserve(4*n);    
+    for (int i = 0; i < 3; i++)
+    {
+        Point center = m_points[i]->m_coord;
+        //#pragma omp parallel for
+        for (int j = 0; j < n; j++)
+        //for (Face* element_j : range_elements)        
+        {
+            Face* element_j = range_elements[j];
+            if (!element_j->mark_concave)
+            {
+                Point d = element_j->getYc() - center;
+                if ((d * d) < radius2)
+                {
+                    //#pragma omp critical
+                    //m_concave_adjacency.push_back(element_j);
+                    for (int k = 0; k < 4; k++)
+                    {
+                        // #pragma omp critical
+                        m_concave_adjacency.push_back(element_j->m_childrenElement[k]);
+                        element_j->mark_concave = true;
+                    }
+                }
+            }
+        }
+    }
+    for (Face* element : range_elements)
+        element->mark_concave = false;
+    // erase duplicates
+    //std::set<Face*> s(m_concave_adjacency.begin(), m_concave_adjacency.end());
+    //m_concave_adjacency.assign(s.begin(), s.end());
 }
 
 Face::~Face()

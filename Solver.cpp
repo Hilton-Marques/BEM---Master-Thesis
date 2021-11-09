@@ -52,6 +52,7 @@ void Solver::CalculateME(Face* element)
                 double shapeF[3] = { 1. - *Xi - *Eta , *Xi, *Eta };
                 Point xksi = Multi(shapeF, element->m_points);
                 Point r = xksi - yc;
+
                 //RTable Ry(m_N, r);
                 double Const2 = u * shapeF[i] * (*W);
                 int zdRpos;
@@ -265,16 +266,16 @@ void Solver::CalculateNearInt(std::vector<Vertex*> sourcesNodes, Face* element)
 
 void Solver::CalculateFarInt(std::vector<Vertex*> sourcesNodes, Face* element)
 {
-    //std::vector<Face*> grangranChildrenElement;
-    //element->getLeafElements(&grangranChildrenElement);
+    std::vector<Face*> grangranChildrenElement;
+    element->getLeafElements(&grangranChildrenElement);
     Point yc = element->getYc();
     std::vector<std::complex<double>> Sb;
     for (Vertex* source : sourcesNodes) 
     {
-      //for (Face* gran : grangranChildrenElement)
-      //{
-      //  source->m_closeElements.push_back(gran);
-      //}
+      for (Face* gran : grangranChildrenElement)
+      {
+        source->m_closeElements.push_back(gran);
+      }
       Point x = source->m_coord - yc;
       Sb = m_RTable.evaluateRecursiveTableS(x);
       //double valueG = Const * Dot(element->m_MEG, &Sb);

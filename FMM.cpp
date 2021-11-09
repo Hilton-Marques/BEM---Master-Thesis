@@ -261,7 +261,7 @@ Matrix FMM::computeBvector(double& erro)
 	// Part 1
 
 	std::vector<Face*> elements = m_solid->m_elementsLevel[startLevel];
-	tic();
+	//tic();
 	//conventional BEM
 
 #pragma omp parallel for
@@ -276,14 +276,14 @@ Matrix FMM::computeBvector(double& erro)
 
 			for (Face* child : childrenElement)
 			{
-				//for (Vertex* source : sourceVertexs)
-				//{
-				//	source->m_closeElements.push_back(child);
-				//}
+				/*for (Vertex* source : sourceVertexs)
+				{
+					source->m_closeElements.push_back(child);
+				}*/
 				//m_solver->CalculateNearInt(sourceVertexs, child);
 				m_solver->CalculateNearIntExact(sourceVertexs, child);
 				// Integrate Expansion
-				m_solver->CalculateME(child);
+				//m_solver->CalculateME(child);
 				//child->m_collectVertexes.insert(child->m_collectVertexes.end(), sourceVertexs.begin(), sourceVertexs.end());
 			}
 		}
@@ -359,7 +359,7 @@ Matrix FMM::computeBvector(double& erro)
 			for (int i = startLevel - 1; i > 0; i--)
 			{
 				elements = m_solid->m_elementsLevel[i];
-				#pragma omp parallel for		
+				//#pragma omp parallel for		
 				for (int j = 0; j < elements.size(); j++)
 				{
 					Face* element = elements[j];
@@ -423,16 +423,16 @@ Matrix FMM::computeBvector(double& erro)
 					for (Face* granChild : granChildrenElement)
 					{
 						//m_solver->CalculateFarInt(sourceVertexs, granChild);
-						//std::vector<Face*> grangranChildrenElement;
-						//granChild->getLeafElements(&grangranChildrenElement);
+						std::vector<Face*> grangranChildrenElement;
+						granChild->getLeafElements(&grangranChildrenElement);
 						Point yc = granChild->getYc();
 						std::vector<std::complex<double>> Sb;
 						for (Vertex* source : sourceVertexs)
 						{
-							//for (Face* gran : grangranChildrenElement)
-							//{
-							//	source->m_closeElements.push_back(gran);
-							//}
+							for (Face* gran : grangranChildrenElement)
+							{
+								source->m_closeElements.push_back(gran);
+							}
 							Point x = source->m_coord - yc;
 							Sb = m_solver->m_RTable.evaluateRecursiveTableS(x);
 							double valueGt = Const * m_solver->Dot(granChild->m_MEG, &Sb);
@@ -463,7 +463,7 @@ Matrix FMM::computeBvector(double& erro)
 	Matrix bFMM = m_solver->m_Gt - m_solver->m_Hd;
 	//Matrix errHd = m_solver->m_Hd - Hd;
 	//Matrix errGt = m_solver->m_Gt - Gt;
-  //Matrix bBEM = Hd - Gt;
+ // Matrix bBEM = Hd - Gt;
 	//bFMM.show();
 	//Matrix errHd = Hd - m_solver->m_Hd;
 	//Matrix errGt = Gt - m_solver->m_Gt;

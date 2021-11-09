@@ -17,14 +17,14 @@ class Solid {
 public:
 
     Solid(std::vector<Vertex*> verts, std::vector<Edge*> edges, std::vector<HalfEdge*> heds,
-          std::vector<Face*> elements, int nL, std::vector<Vertex*> vertsBd);
+          std::vector<Face*> elements, int nL, std::vector<Vertex*> vertsBd, bool concave_allow, double concave_radiu_fac);
 
     static int calculateNMaxVerts(const int nL, int nEdges, const int nEl, const int nVerts);
     static int calculateNMaxEdges(const int nL, int nEdges, const  int nFaces);
     ~Solid();
 
 
-    void Start();
+    void Start(bool concave_allow, double concave_radiu_fac);
 
 
     std::vector<Vertex*> m_verts;

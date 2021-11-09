@@ -36,6 +36,8 @@ public:
 
     std::vector<std::complex<double>* > m_MEH_p;
 
+    bool mark_concave = false;
+
 
     Point m_normal;
     double m_jacobian; 
@@ -46,6 +48,8 @@ public:
     std::vector<Vertex*> m_collectVertexes;
     bool m_isLeaf = false;
     std::vector<Face*> m_adjacentFaces;
+    std::vector<Face*> m_concave_adjacency;
+
     bool m_bd = false;
     short int m_nL;
     int m_nCloseNodes;
@@ -70,7 +74,8 @@ public:
     Matrix exactIntG(Vertex* source);
     Matrix exactIntH(Vertex* source);
     std::vector<Face*> getChildrenElement();
-    double getRadius();
+    double getRadius(double fac);
+    void buildConcaveAdjacency(std::vector<Face*> & range_elements, double fac);
 
     ~Face();
 

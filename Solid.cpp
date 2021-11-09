@@ -8,7 +8,7 @@
 
 
 Solid::Solid(std::vector<Vertex*> verts, std::vector<Edge*> edges, std::vector<HalfEdge*> heds, std::vector<Face*> elements,
-             int nL, std::vector<Vertex*> vertsBd):
+             int nL, std::vector<Vertex*> vertsBd, bool concave_allow, double concave_radiu_fac):
 m_verts(verts), m_edges (edges), m_heds(heds), m_elementsMother(elements) , m_nL(nL), m_vertsBd(vertsBd)
 
 {
@@ -27,7 +27,7 @@ m_verts(verts), m_edges (edges), m_heds(heds), m_elementsMother(elements) , m_nL
     m_verts.reserve(maxNVerts);
     m_edges.reserve(maxNHeds);
     m_heds.reserve(maxNHeds);
-    Start();
+    Start(concave_allow, concave_radiu_fac);
 }
 
 int Solid::calculateNMaxVerts(const int nL, int nEdges, const int nEl, const int nVerts)
@@ -76,7 +76,7 @@ Solid::~Solid()
     }
 }
 
-void Solid::Start() {
+void Solid::Start(bool concave_allow, double concave_radiu_fac) {
     m_elementsLevel.push_back(m_elementsMother);
     m_elements.insert(m_elements.end(), std::begin(m_elementsMother), std::end(m_elementsMother));
     
@@ -257,6 +257,38 @@ void Solid::Start() {
         m_elementsLevel.push_back(newElements);
         m_elements.insert(m_elements.end(), std::begin(newElements), std::end(newElements));
     }
+
+
+    // for concave regions
+
+    if (concave_allow) {
+        for (int i = 0; i < m_nL - 1 ; i++)
+        {
+            std::vector<Face*> elements = m_elementsLevel[i];
+            //#pragma omp parallel for
+            for (int j = 0; j < elements.size(); j++)
+          //for (Face* element_i : elements)
+            {
+                Face* element_i = elements[j];
+                //std::vector<Face*> concave_adjacency_children; 
+                //concave_adjacency_children.reserve(4 * element_i->m_concave_adjacency.size());
+                //for (Face* element_j : element_i->m_concave_adjacency)
+                //{
+                //    for (Face* element_j_child : element_j->m_childrenElement)
+                //        concave_adjacency_children.push_back(element_j_child);
+                //}
+                for (Face* element_i_child : element_i->m_childrenElement)
+                {
+                    element_i_child->buildConcaveAdjacency(element_i->m_concave_adjacency, concave_radiu_fac);
+                }
+            }
+        }
+
+
+    }
+    
+
+
 
 
 }
