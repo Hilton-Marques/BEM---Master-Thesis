@@ -81,9 +81,10 @@ Matrix GMRES::Solver(Matrix &b,int m,  int max_iter, double tol)
       double residBef = m_resid;
       m_resid = std::abs(s[{i + 1,0}]) / b.norm();
       double err = std::abs(m_resid - residBef) / residBef;
-
+      m_erros.push_back(m_resid);
       if (m_resid < tol || err < tol  ) {
         Update(x, i, H, s, Q);
+        m_last_iter = i;
         return x;
       }
 
@@ -95,6 +96,7 @@ Matrix GMRES::Solver(Matrix &b,int m,  int max_iter, double tol)
     s[{i + 1, 0}] = rNorm;
     m_resid = std::abs(s[{i + 1, 0}]) / b.norm();
     if (m_resid < tol) {
+      m_last_iter = j;
       return x;
     }
     j++;

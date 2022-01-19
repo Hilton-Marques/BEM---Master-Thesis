@@ -4,6 +4,7 @@
 #include "Face.h"
 #include "RTable.h"
 #include "GaussQuadrature.h"
+#include "DunavantQuadrature.h"
 #include <complex>
 #include <vector>
 #include "matrix.h"
@@ -34,14 +35,14 @@ public:
 	const int m_nNodes;
 	const int m_N; // truncation term
 	const int m_nGFMM; // gauss point for FMM
-	const int m_nGBEM = 20; // gauss point for BEM
+	const int m_nGBEM = 11; // gauss point for BEM
 	int m_NTot; // total of truncation terms 
 	Matrix m_Gt{ m_nNodes,1 };
 	Matrix m_Hd{ m_nNodes,1 };
 	RTable m_RTable;
-	GaussQuad m_gauss;
+	//GaussQuad m_gauss;
+	DunavantQuad m_gauss;
 	SolverType m_type = SolverType::bVector;
-
 	
 
 };

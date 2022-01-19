@@ -10,9 +10,9 @@ extern const double Const;
 FMM::FMM()
 {
 }
-FMM::FMM(Solid* solid, int N, int NG, int Nc, int field) {
+FMM::FMM(Solid* solid, int N, int NG, int Nc, int field, std::ofstream* fw) {
 
-
+	m_fw = fw;
 	m_nLMax = solid->m_nL;
 	m_Nc = Nc;
 	m_field = field;
@@ -46,23 +46,37 @@ FMM::FMM(Solid* solid, int N, int NG, int Nc, int field) {
 		}
 	}
 
-	double err;
+	
 	
 	changeBoundaryCondition(solid->m_verts, elements);  // change boundary condition to potential fields
 
-
+	double err;
 	m_b = computeBvector(err);
 
 
-	//std::cout.precision(15);
-	//std::cout << err << "\n";
-	//std::cout << solid->m_nPts;
-	//prepareForGMRES();
-	//GMRES gmres(this);
-	//m_x = gmres.Solver(m_b);
-	//m_resid = gmres.m_resid;
+	std::cout.precision(15);
+	std::cout << err << "\n";
+	std::cout << solid->m_nPts;
+	prepareForGMRES();
+	GMRES gmres(this);
+	m_x = gmres.Solver(m_b);
+	m_resid = gmres.m_resid;
+	//Set Prescribed Boundary Condition 
+	for (int i = 0; i < m_nTotalVerts; i++)
+	{
+		Vertex* pt = m_solid->m_verts[i];
+		pt->markTemp = false;
+		if (!pt->m_bd)
+		{
+			m_x[{i, 0}] = pt->m_u;
+		}
+	}
+	auto exact = getHarmonicTemperature();
+	double erro = (m_x - exact).norm();
+	std::cout << "erro GMRES" << "\n";
+	std::cout << erro << "\n";
 
-
+	//Test Gmres with a real matrix
 	//Matrix A(4, 4, { 8, 7, 6, 1, 6, 7, 2, 5, 5, 9, 3, 2, 10, 9, 9, 10 });
 	//Matrix b(4, 1, { 1,0,1,0 });
 	//Matrix res = gmres.BiCGM(A,b);
@@ -261,10 +275,10 @@ Matrix FMM::computeBvector(double& erro)
 	// Part 1
 
 	std::vector<Face*> elements = m_solid->m_elementsLevel[startLevel];
-	//tic();
+	tic();
 	//conventional BEM
 
-#pragma omp parallel for
+#pragma omp parallel for 
 		for (int i = 0; i < elements.size(); i++)
 		{
 			Face* element = elements[i];
@@ -283,7 +297,7 @@ Matrix FMM::computeBvector(double& erro)
 				//m_solver->CalculateNearInt(sourceVertexs, child);
 				m_solver->CalculateNearIntExact(sourceVertexs, child);
 				// Integrate Expansion
-				//m_solver->CalculateME(child);
+				m_solver->CalculateME(child);
 				//child->m_collectVertexes.insert(child->m_collectVertexes.end(), sourceVertexs.begin(), sourceVertexs.end());
 			}
 		}
@@ -323,7 +337,7 @@ Matrix FMM::computeBvector(double& erro)
 
 
 	// Part2
-		if (Nc == 1)
+ 		if (Nc == 1)
 		{
 			for (int i = startLevel - 1; i > 0; i--)
 			{
@@ -359,7 +373,7 @@ Matrix FMM::computeBvector(double& erro)
 			for (int i = startLevel - 1; i > 0; i--)
 			{
 				elements = m_solid->m_elementsLevel[i];
-				//#pragma omp parallel for		
+				#pragma omp parallel for		
 				for (int j = 0; j < elements.size(); j++)
 				{
 					Face* element = elements[j];
@@ -429,10 +443,10 @@ Matrix FMM::computeBvector(double& erro)
 						std::vector<std::complex<double>> Sb;
 						for (Vertex* source : sourceVertexs)
 						{
-							for (Face* gran : grangranChildrenElement)
+							/*for (Face* gran : grangranChildrenElement)
 							{
 								source->m_closeElements.push_back(gran);
-							}
+							}*/
 							Point x = source->m_coord - yc;
 							Sb = m_solver->m_RTable.evaluateRecursiveTableS(x);
 							double valueGt = Const * m_solver->Dot(granChild->m_MEG, &Sb);
@@ -459,11 +473,11 @@ Matrix FMM::computeBvector(double& erro)
 				}
 			}
 		}	
-	 //toc();
+	//toc();
 	Matrix bFMM = m_solver->m_Gt - m_solver->m_Hd;
 	//Matrix errHd = m_solver->m_Hd - Hd;
 	//Matrix errGt = m_solver->m_Gt - Gt;
- // Matrix bBEM = Hd - Gt;
+    //Matrix bBEM = Hd - Gt;
 	//bFMM.show();
 	//Matrix errHd = Hd - m_solver->m_Hd;
 	//Matrix errGt = Gt - m_solver->m_Gt;
@@ -473,11 +487,12 @@ Matrix FMM::computeBvector(double& erro)
 	//std::cout << errGt.norm() << "\n";
 	//std::cout << err.norm() << "\n";
 	//std::cout << bFMM.norm() << "\n";
-	
-	double erroFMM = bFMM.norm() / m_solver->m_Hd.norm();
+	// Erro para  Hd - Gt
+	//double erroFMM = bFMM.norm() / m_solver->m_Hd.norm();
 	//double erroBEM = bBEM.norm() / Hd.norm();
 	//std::cout << m_solid->m_nPts << "\n";
-	std::cout << "  "<< erroFMM << "\n";
+	//std::cout << "  "<< erroFMM << "\n";
+	//*m_fw<< "  " << erroFMM << "\n";
 	//std::cout << erroBEM << "\n";
 
 	erro = bFMM.norm() / m_solver->m_Hd.norm();
@@ -488,7 +503,7 @@ Matrix FMM::computeBvector(double& erro)
 Matrix FMM::matrixVectorMulti(Matrix &x)
 {
 
-	#pragma omp for
+#pragma omp parallel for 
 	for (int i = 0; i < m_nTotalVerts; i++)
 	{
 		Vertex* pt = m_solid->m_verts[i];
@@ -498,154 +513,183 @@ Matrix FMM::matrixVectorMulti(Matrix &x)
 		}
 	}
 
-	// the same with elements
-	std::vector<Face*> elements = m_solid->m_elementsLevel[m_nLMax - 2];
-	//conventional BEM
-
-#pragma omp parallel for 	
-
-	for (int i = 0; i < elements.size(); i++)
+	double err;
+	auto res = -computeBvector(err);
+	//Set Boundary Condiiton 
+#pragma omp parallel for 
+	for (int i = 0; i < m_nTotalVerts; i++)
 	{
-		Face* element = elements[i];
-		std::vector<Face*> adjacentElements = element->getAdjacentElements();
-		std::vector<Vertex*> sourceVertexs = getLeafNodesFromElements(adjacentElements);
-		for (Face* child : element->m_childrenElement)
+		Vertex* pt = m_solid->m_verts[i];
+		pt->markTemp = false;
+		if (!pt->m_bd)
 		{
-			m_solver->CalculateNearIntMatrix(sourceVertexs, child);
-			// Integrate Expansion
-			//m_solver->CalculateME(child);
-
-			for (int l = 0; l < 3; l++)
-			{
-				if (child->m_points[l]->m_bd)
-				{
-					for (int k = 0; k < m_tot; k++)
-					{
-						element->m_MEH[k] += child->m_points[l]->m_u * child->m_MEH_p[l][k];
-					}
-				}
-				if (child->m_bd) // have to change to take care of three types of gradiente
-				{
-					for (int k = 0; k < m_tot; k++)
-					{
-						element->m_MEG[k] += child->m_q[l] * child->m_MEG_p[l][k];
-					}
-				}
-			}
-
-			//child->m_collectVertexes.insert(child->m_collectVertexes.end(), sourceVertexs.begin(), sourceVertexs.end());
-			//child->reset();
-		}
-
-		// Accumulate moments
-
-		//element->accumulate();
-
-	}
-
-	// Part2
-	for (int i = m_nLMax - 3; i > 0; i--)
-	{
-
-		elements = m_solid->m_elementsLevel[i];
-#pragma omp parallel for		
-		for (int j = 0; j < elements.size(); j++)
-		{
-			Face* element = elements[j];
-
-			//already evaluate FMM delivery downward pass
-			std::vector<Face*> adjacentElementsMother = element->getAdjacentElements();
-			std::vector<Face*> adjacentElementsChildren;
-			adjacentElementsChildren.reserve(4 * adjacentElementsMother.size());
-			for (Face* adj : adjacentElementsMother)
-			{
-				adjacentElementsChildren.insert(adjacentElementsChildren.end(), std::begin(adj->m_childrenElement), std::end(adj->m_childrenElement));
-			}
-			std::vector<Vertex*> leafPoints = getLeafNodesFromElements(adjacentElementsChildren);
-			std::sort(leafPoints.begin(), leafPoints.end());
-
-
-			for (Face* child : element->m_childrenElement)
-			{
-				std::vector<Vertex*> sourceVertexs;
-				std::vector<Face*> adjacentElementsChild = child->getAdjacentElements();
-				std::sort(adjacentElementsChild.begin(), adjacentElementsChild.end());
-				std::vector<Vertex*> adjacentNodes = getLeafNodesFromElements(adjacentElementsChild);
-				std::sort(adjacentNodes.begin(), adjacentNodes.end());
-				// got A \ B with poitns	
-				std::set_difference(leafPoints.begin(), leafPoints.end(), adjacentNodes.begin(), adjacentNodes.end(), std::inserter(sourceVertexs, sourceVertexs.begin()));
-
-				//far integral
-				m_solver->CalculateFarInt(sourceVertexs, child);
-
-			}
-			element->setFMMSizes(m_tot);
-			std::vector<Face*> childrenElement = element->getChildrenElement();
-			m_solver->CalculateMMT(element);
+			res[{i, 0}] = x[{i, 0}];
 		}
 	}
-	// Part3 ///////////////////
-	elements = m_solid->m_elementsLevel[0];
-//#pragma omp parallel for 	
-	for (int i = 0; i < elements.size(); i++)
+	
+	return res; 
+////
+////	// the same with elements
+////	std::vector<Face*> elements = m_solid->m_elementsLevel[m_nLMax - 2];
+////	//conventional BEM
+////
+//////#pragma omp parallel for 	
+////
+////	for (int i = 0; i < elements.size(); i++)
+////	{
+////		Face* element = elements[i];
+////		std::vector<Face*> adjacentElements = element->getAdjacentElements();
+////		std::vector<Vertex*> sourceVertexs = getLeafNodesFromElements(adjacentElements);
+////		for (Face* child : element->m_childrenElement)
+////		{
+////			m_solver->CalculateNearIntMatrix(sourceVertexs, child);
+////			// Integrate Expansion
+////			//m_solver->CalculateME(child);
+////
+////			for (int l = 0; l < 3; l++)
+////			{
+////				if (child->m_points[l]->m_bd)
+////				{
+////					for (int k = 0; k < m_tot; k++)
+////					{
+////						element->m_MEH[k] += child->m_points[l]->m_u * child->m_MEH_p[l][k];
+////					}
+////				}
+////				if (child->m_bd) // have to change to take care of three types of gradiente
+////				{
+////					for (int k = 0; k < m_tot; k++)
+////					{
+////						element->m_MEG[k] += child->m_q[l] * child->m_MEG_p[l][k];
+////					}
+////				}
+////			}
+////
+////			//child->m_collectVertexes.insert(child->m_collectVertexes.end(), sourceVertexs.begin(), sourceVertexs.end());
+////			//child->reset();
+////		}
+////
+////		// Accumulate moments
+////
+////		//element->accumulate();
+////
+////	}
+////
+////	// Part2
+////	for (int i = m_nLMax - 3; i > 0; i--)
+////	{
+////
+////		elements = m_solid->m_elementsLevel[i];
+////#pragma omp parallel for		
+////		for (int j = 0; j < elements.size(); j++)
+////		{
+////			Face* element = elements[j];
+////
+////			//already evaluate FMM delivery downward pass
+////			std::vector<Face*> adjacentElementsMother = element->getAdjacentElements();
+////			std::vector<Face*> adjacentElementsChildren;
+////			adjacentElementsChildren.reserve(4 * adjacentElementsMother.size());
+////			for (Face* adj : adjacentElementsMother)
+////			{
+////				adjacentElementsChildren.insert(adjacentElementsChildren.end(), std::begin(adj->m_childrenElement), std::end(adj->m_childrenElement));
+////			}
+////			std::vector<Vertex*> leafPoints = getLeafNodesFromElements(adjacentElementsChildren);
+////			std::sort(leafPoints.begin(), leafPoints.end());
+////
+////
+////			for (Face* child : element->m_childrenElement)
+////			{
+////				std::vector<Vertex*> sourceVertexs;
+////				std::vector<Face*> adjacentElementsChild = child->getAdjacentElements();
+////				std::sort(adjacentElementsChild.begin(), adjacentElementsChild.end());
+////				std::vector<Vertex*> adjacentNodes = getLeafNodesFromElements(adjacentElementsChild);
+////				std::sort(adjacentNodes.begin(), adjacentNodes.end());
+////				// got A \ B with poitns	
+////				std::set_difference(leafPoints.begin(), leafPoints.end(), adjacentNodes.begin(), adjacentNodes.end(), std::inserter(sourceVertexs, sourceVertexs.begin()));
+////
+////				//far integral
+////				m_solver->CalculateFarInt(sourceVertexs, child);
+////
+////			}
+////			element->setFMMSizes(m_tot);
+////			std::vector<Face*> childrenElement = element->getChildrenElement();
+////			m_solver->CalculateMMT(element);
+////		}
+////	}
+////	// Part3 ///////////////////
+////	elements = m_solid->m_elementsLevel[0];
+//////#pragma omp parallel for 	
+////	for (int i = 0; i < elements.size(); i++)
+////	{
+////		Face* element = elements[i];
+////
+////		//already evaluate FMM delivery downward pass
+////		std::vector<Face*> adjacentElementsMother = element->m_adjacentFaces;
+////		std::vector<Face*> adjacentElementsChildren;
+////		adjacentElementsChildren.reserve(4 * adjacentElementsMother.size());
+////		for (Face* adj : adjacentElementsMother)
+////		{
+////			adjacentElementsChildren.insert(adjacentElementsChildren.end(), std::begin(adj->m_childrenElement), std::end(adj->m_childrenElement));
+////		}
+////		std::vector<Vertex*> leafPoints = getLeafNodesFromElements(adjacentElementsChildren);
+////		std::sort(leafPoints.begin(), leafPoints.end());
+////
+////		auto farElements = getFarElements(element);
+////		auto farNodes = getLeafNodesFromElements(farElements);
+////
+////		for (Face* child : element->m_childrenElement)
+////		{
+////			std::vector<Vertex*> sourceVertexs;
+////			std::vector<Face*> adjacentElementsChild = child->getAdjacentElements();
+////			std::sort(adjacentElementsChild.begin(), adjacentElementsChild.end());
+////			std::vector<Vertex*> adjacentNodes = getLeafNodesFromElements(adjacentElementsChild);
+////			std::sort(adjacentNodes.begin(), adjacentNodes.end());
+////			// got A \ B with poitns	
+////			std::set_difference(leafPoints.begin(), leafPoints.end(), adjacentNodes.begin(), adjacentNodes.end(), std::inserter(sourceVertexs, sourceVertexs.begin()));
+////
+////			// accumulate nodes from far elements
+////			if (!farNodes.empty())
+////			{
+////				sourceVertexs.insert(sourceVertexs.end(), farNodes.begin(), farNodes.end());
+////			}
+////
+////			// Far integral
+////			//m_solver->CalculateFarInt(sourceVertexs, child );
+////
+////			Point yc = child->getYc();
+////			std::vector<std::complex<double>> Sb;
+////			for (Vertex* source : sourceVertexs)
+////			{
+////
+////				Point x = source->m_coord - yc;
+////				Sb = m_solver->m_RTable.evaluateRecursiveTableS(x);
+////				m_solver->m_Gt[{source->m_id, 0}] += Const * m_solver->Dot(child->m_MEG, &Sb);
+////				m_solver->m_Hd[{source->m_id, 0}] += Const * m_solver->Dot(child->m_MEH, &Sb);
+////
+////			}
+////			child->reset();
+////		}
+////	}
+////	for (int i = 0; i < m_nDb; i++)
+////	{
+////		Vertex* pt = m_solid->m_vertsBd[i];
+////		m_solver->m_Hd[{pt->m_id, 0}] = x[{pt->m_id, 0}];
+////	}
+////	Matrix res = (m_solver->m_Hd - m_solver->m_Gt);
+////	m_solver->reset();
+////	return res;
+}
+
+Matrix FMM::getHarmonicTemperature()
+{
+	auto n = m_solid->m_verts.size();
+	Matrix u(n, 1);
+	for (int i = 0; i < n; i++)
 	{
-		Face* element = elements[i];
+		auto pt = m_solid->m_verts[i];
+		u[{i, 0}] = trivialField(pt->m_coord.m_x, pt->m_coord.m_y, pt->m_coord.m_z);
 
-		//already evaluate FMM delivery downward pass
-		std::vector<Face*> adjacentElementsMother = element->m_adjacentFaces;
-		std::vector<Face*> adjacentElementsChildren;
-		adjacentElementsChildren.reserve(4 * adjacentElementsMother.size());
-		for (Face* adj : adjacentElementsMother)
-		{
-			adjacentElementsChildren.insert(adjacentElementsChildren.end(), std::begin(adj->m_childrenElement), std::end(adj->m_childrenElement));
-		}
-		std::vector<Vertex*> leafPoints = getLeafNodesFromElements(adjacentElementsChildren);
-		std::sort(leafPoints.begin(), leafPoints.end());
-
-		auto farElements = getFarElements(element);
-		auto farNodes = getLeafNodesFromElements(farElements);
-
-		for (Face* child : element->m_childrenElement)
-		{
-			std::vector<Vertex*> sourceVertexs;
-			std::vector<Face*> adjacentElementsChild = child->getAdjacentElements();
-			std::sort(adjacentElementsChild.begin(), adjacentElementsChild.end());
-			std::vector<Vertex*> adjacentNodes = getLeafNodesFromElements(adjacentElementsChild);
-			std::sort(adjacentNodes.begin(), adjacentNodes.end());
-			// got A \ B with poitns	
-			std::set_difference(leafPoints.begin(), leafPoints.end(), adjacentNodes.begin(), adjacentNodes.end(), std::inserter(sourceVertexs, sourceVertexs.begin()));
-
-			// accumulate nodes from far elements
-			if (!farNodes.empty())
-			{
-				sourceVertexs.insert(sourceVertexs.end(), farNodes.begin(), farNodes.end());
-			}
-
-			// Far integral
-			//m_solver->CalculateFarInt(sourceVertexs, child );
-
-			Point yc = child->getYc();
-			std::vector<std::complex<double>> Sb;
-			for (Vertex* source : sourceVertexs)
-			{
-
-				Point x = source->m_coord - yc;
-				Sb = m_solver->m_RTable.evaluateRecursiveTableS(x);
-				m_solver->m_Gt[{source->m_id, 0}] += Const * m_solver->Dot(child->m_MEG, &Sb);
-				m_solver->m_Hd[{source->m_id, 0}] += Const * m_solver->Dot(child->m_MEH, &Sb);
-
-			}
-			child->reset();
-		}
 	}
-	for (int i = 0; i < m_nDb; i++)
-	{
-		Vertex* pt = m_solid->m_vertsBd[i];
-		m_solver->m_Hd[{pt->m_id, 0}] = x[{pt->m_id, 0}];
-	}
-	Matrix res = (m_solver->m_Hd - m_solver->m_Gt);
-	m_solver->reset();
-	return res;
+	return u;
 }
 
 void FMM::prepareForGMRES()
@@ -687,21 +731,21 @@ void FMM::prepareForGMRES()
 
 		}
 	}
-
-	elements = m_solid->m_elementsLevel[m_nLMax - 2];
-
-#pragma omp parallel for		
-	for (int i = 0; i < elements.size(); i++)
-	{
-		Face* element = elements[i];
-		std::vector<Face*> adjacentElements = element->getAdjacentElements();
-		std::vector<Vertex*> sourceVertexs = getLeafNodesFromElements(adjacentElements);
-		for (Face* child : element->m_childrenElement)
-		{	
-			m_solver->prepareElementMatrix(sourceVertexs, child);		
-			m_solver->CalculateMEForGMRES(child);
-		}
-	}
+//
+//	elements = m_solid->m_elementsLevel[m_nLMax - 2];
+//
+////#pragma omp parallel for		
+//	for (int i = 0; i < elements.size(); i++)
+//	{
+//		Face* element = elements[i];
+//		std::vector<Face*> adjacentElements = element->getAdjacentElements();
+//		std::vector<Vertex*> sourceVertexs = getLeafNodesFromElements(adjacentElements);
+//		for (Face* child : element->m_childrenElement)
+//		{	
+//			m_solver->prepareElementMatrix(sourceVertexs, child);		
+//			m_solver->CalculateMEForGMRES(child);
+//		}
+//	}
 
 
 }
@@ -780,12 +824,19 @@ double FMM::trivialGrad(double x, double y, double z, Point& n)
 
 void FMM::changeBoundaryCondition(std::vector<Vertex*> points, std::vector<Face*> elements)
 {
-	for (Vertex* pt : points)
+	for (int i = 0; i < 700; i++)
 	{
+		auto pt = points[i];
 		pt->m_u = trivialField(pt->m_coord.m_x, pt->m_coord.m_y, pt->m_coord.m_z);
 		//pt->m_u = 1.0; // diagonal
 		pt->m_bd = true;
 	}
+	//for (Vertex* pt : points)
+	//{
+	//	pt->m_u = trivialField(pt->m_coord.m_x, pt->m_coord.m_y, pt->m_coord.m_z);
+	//	//pt->m_u = 1.0; // diagonal
+	//	pt->m_bd = true;
+	//}
 	for (Face* element : elements)
 	{
 		element->m_bd = true;
@@ -808,7 +859,11 @@ void FMM::changeBoundaryCondition(std::vector<Vertex*> points, std::vector<Face*
 
 void FMM::toc()
 {
+	m_fw->precision(15);
 	std::cout << " "
+		<< ((double)(clock() - m_tictoc_stack.top())) / CLOCKS_PER_SEC
+		<< std::endl;
+	*m_fw << " "
 		<< ((double)(clock() - m_tictoc_stack.top())) / CLOCKS_PER_SEC
 		<< std::endl;
 	m_tictoc_stack.pop();

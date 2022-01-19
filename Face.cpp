@@ -33,7 +33,7 @@ Face::Face(int cHedInc, double q[] , short int level) {
 std::vector<Face*> Face::getAdjacentElements(bool flag)
 {
     //std::vector<int> elIds;
-    std::vector<Face*> adjacentElements;
+    std::vector<Face*> adjacentElements = m_concave_adjacency;
     //adjacentElements.reserve(15);
     for (int i = 0; i < 3; i++)
     {
@@ -69,6 +69,7 @@ std::vector<Face*> Face::getAdjacentElements(bool flag)
     adjacentElements.assign(s.begin(), s.end());
     //if (!m_concave_adjacency.empty())
     //    int a = 1;
+    m_adjacentFaces = adjacentElements;
     return adjacentElements;
 }
 
@@ -533,7 +534,7 @@ double Face::getRadius(double fac )
 }
 
 void Face::buildConcaveAdjacency(std::vector<Face*>& range_elements, double fac)
-{
+{   
     double radius2 = getRadius(fac);
     int n = range_elements.size();
     //m_concave_adjacency.reserve(4*n);    

@@ -27,6 +27,7 @@ public:
     std::vector<Face*> m_closeElements;
     std::vector<Vertex*> m_star;
     std::vector<HalfEdge*> m_hed_star;
+    std::vector<double> Gt;
 };
 
 

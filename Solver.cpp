@@ -14,7 +14,7 @@ Solver::Solver(const int &N, const int &nGFMM, const int &nNodes): m_N(N), m_nGF
     m_RTable.setSizeRTable(N);
     m_RTable.setSizeRecTableR(N);
     m_RTable.setSizeRecTableS(N);
-    m_gauss.init(m_nGBEM);
+    m_gauss.init(nGFMM);
 }
 
 Solver::~Solver()
@@ -28,7 +28,7 @@ void Solver::CalculateME(Face* element)
     //element->m_fatherElement->setFMMSizes(m_NTot);
     Face* fatherElement = element->m_fatherElement;
     element->setFMMSizes(m_NTot);
-    GaussQuad gauss(m_nGFMM);
+    //DunavantQuad gauss(m_nGFMM);
     Point yc = element->m_fatherElement->getYc();
 
     Point* normal = &element->m_normal;
@@ -44,11 +44,16 @@ void Solver::CalculateME(Face* element)
         {
             const double u = field->m_u; // temperature
 
-            for (int j = 0; j < gauss.m_totN; j++)
+            for (int j = 0; j < m_gauss.m_totN; j++)
             {
-                double* Xi = &gauss.m_gaussPointsXi[j];
-                double* Eta = &gauss.m_gaussPointsEta[j];
-                double* W = &gauss.m_gaussWeights[j];
+                //double* Xi = &m_gauss.m_gaussPointsXi[j];
+                //double* Eta = &m_gauss.m_gaussPointsEta[j];
+                //double* W = &m_gauss.m_gaussWeights[j];
+
+                double* Xi = &m_gauss.m_gaussPointsXi[j][m_nGFMM];
+                double* Eta = &m_gauss.m_gaussPointsEta[j][m_nGFMM];
+                double* W = &m_gauss.m_gaussWeights[j][m_nGFMM];
+
                 double shapeF[3] = { 1. - *Xi - *Eta , *Xi, *Eta };
                 Point xksi = Multi(shapeF, element->m_points);
                 Point r = xksi - yc;
@@ -133,11 +138,16 @@ void Solver::CalculateME(Face* element)
             const double q = element->m_q[i]; // gradient
             const double Const = (*jacobian) * q;
 
-                for (int j = 0; j < gauss.m_totN; j++)
+                for (int j = 0; j < m_gauss.m_totN; j++)
                 {
-                    double* Xi = &gauss.m_gaussPointsXi[j];
-                    double* Eta = &gauss.m_gaussPointsEta[j];
-                    double* W = &gauss.m_gaussWeights[j];
+                    //double* Xi = &m_gauss.m_gaussPointsXi[j];
+                    //double* Eta = &m_gauss.m_gaussPointsEta[j];
+                    //double* W = &m_gauss.m_gaussWeights[j];
+
+                    double* Xi = &m_gauss.m_gaussPointsXi[j][m_nGFMM];
+                    double* Eta = &m_gauss.m_gaussPointsEta[j][m_nGFMM];
+                    double* W = &m_gauss.m_gaussWeights[j][m_nGFMM];
+
                     double shapeF[3] = {  1. - *Xi - *Eta, *Xi, *Eta };
                     Point xksi = Multi(shapeF, element->m_points);
                     const Point r = xksi - yc;
@@ -217,9 +227,14 @@ void Solver::CalculateNearInt(std::vector<Vertex*> sourcesNodes, Face* element)
             double H = 0.0;
             for (int j = 0; j < m_gauss.m_totN; j++)
             {
-              double* Xi = &m_gauss.m_gaussPointsXi[j];
-              double* Eta = &m_gauss.m_gaussPointsEta[j];
-              double* W = &m_gauss.m_gaussWeights[j];
+              //double* Xi = &m_gauss.m_gaussPointsXi[j];
+              //double* Eta = &m_gauss.m_gaussPointsEta[j];
+              //double* W = &m_gauss.m_gaussWeights[j];
+
+              double* Xi = &m_gauss.m_gaussPointsXi[j][m_nGFMM];
+              double* Eta = &m_gauss.m_gaussPointsEta[j][m_nGFMM];
+              double* W = &m_gauss.m_gaussWeights[j][m_nGFMM];
+
               double shapeF[3] = { 1. - *Xi - *Eta, *Xi, *Eta, };
               Point xksi = Multi(shapeF, element->m_points);
               Point r = xksi - source->m_coord;
@@ -245,9 +260,14 @@ void Solver::CalculateNearInt(std::vector<Vertex*> sourcesNodes, Face* element)
           double G = 0.0;
           for (int j = 0; j < m_gauss.m_totN; j++)
           {
-            double* Xi = &m_gauss.m_gaussPointsXi[j];
-            double* Eta = &m_gauss.m_gaussPointsEta[j];
-            double* W = &m_gauss.m_gaussWeights[j];
+            //double* Xi = &m_gauss.m_gaussPointsXi[j];
+            //double* Eta = &m_gauss.m_gaussPointsEta[j];
+            //double* W = &m_gauss.m_gaussWeights[j];
+
+            double* Xi = &m_gauss.m_gaussPointsXi[j][m_nGFMM];
+            double* Eta = &m_gauss.m_gaussPointsEta[j][m_nGFMM];
+            double* W = &m_gauss.m_gaussWeights[j][m_nGFMM];
+
             double shapeF[3] = { 1. - *Xi - *Eta , *Xi, *Eta };
             Point xksi = Multi(shapeF, element->m_points);
             Point r = xksi - source->m_coord;
@@ -272,10 +292,10 @@ void Solver::CalculateFarInt(std::vector<Vertex*> sourcesNodes, Face* element)
     std::vector<std::complex<double>> Sb;
     for (Vertex* source : sourcesNodes) 
     {
-      for (Face* gran : grangranChildrenElement)
+    /*  for (Face* gran : grangranChildrenElement)
       {
         source->m_closeElements.push_back(gran);
-      }
+      }*/
       Point x = source->m_coord - yc;
       Sb = m_RTable.evaluateRecursiveTableS(x);
       //double valueG = Const * Dot(element->m_MEG, &Sb);
@@ -394,9 +414,14 @@ void Solver::prepareElementMatrix(std::vector<Vertex*> sourceNodes , Face* eleme
           double H = 0.0;
           for (int k = 0; k < m_gauss.m_totN; k++)
           {
-            double* Xi = &m_gauss.m_gaussPointsXi[k];
-            double* Eta = &m_gauss.m_gaussPointsEta[k];
-            double* W = &m_gauss.m_gaussWeights[k];
+            //double* Xi = &m_gauss.m_gaussPointsXi[k];
+            //double* Eta = &m_gauss.m_gaussPointsEta[k];
+            //double* W = &m_gauss.m_gaussWeights[k];
+
+            double* Xi = &m_gauss.m_gaussPointsXi[k][m_nGFMM];
+            double* Eta = &m_gauss.m_gaussPointsEta[k][m_nGFMM];
+            double* W = &m_gauss.m_gaussWeights[k][m_nGFMM];
+
             double shapeF[3] = { 1. - *Xi - *Eta, *Xi, *Eta, };
             Point xksi = Multi(shapeF, element->m_points);
             Point r = xksi - source->m_coord;
@@ -418,9 +443,14 @@ void Solver::prepareElementMatrix(std::vector<Vertex*> sourceNodes , Face* eleme
         double G = 0.0;
         for (int k = 0; k < m_gauss.m_totN; k++)
         {
-          double* Xi = &m_gauss.m_gaussPointsXi[k];
-          double* Eta = &m_gauss.m_gaussPointsEta[k];
-          double* W = &m_gauss.m_gaussWeights[k];
+          //double* Xi = &m_gauss.m_gaussPointsXi[k];
+          //double* Eta = &m_gauss.m_gaussPointsEta[k];
+          //double* W = &m_gauss.m_gaussWeights[k];
+
+          double* Xi = &m_gauss.m_gaussPointsXi[k][m_nGFMM];
+          double* Eta = &m_gauss.m_gaussPointsEta[k][m_nGFMM];
+          double* W = &m_gauss.m_gaussWeights[k][m_nGFMM];
+
           double shapeF[3] = { 1. - *Xi - *Eta , *Xi, *Eta };
           Point xksi = Multi(shapeF, element->m_points);
           Point r = xksi - source->m_coord;
@@ -612,6 +642,7 @@ void Solver::CalculateMEForGMRES(Face* element)
 
 void Solver::CalculateNearIntExact(std::vector<Vertex*> sourcesNodes, Face* element)
 {
+  
   double jacobian = element->m_jacobian;
   double jac2 = element->m_jacobian * element->m_jacobian;
   double tol = 1.0e-10;
@@ -620,7 +651,6 @@ void Solver::CalculateNearIntExact(std::vector<Vertex*> sourcesNodes, Face* elem
 
   for (Vertex* source : sourcesNodes)
   {
-    
     // Calculate Integral
     Point x0 = source->m_coord - element->m_points[2]->m_coord;
     double X00 = x0 * x0;
@@ -759,7 +789,8 @@ void Solver::CalculateNearIntExact(std::vector<Vertex*> sourcesNodes, Face* elem
     }
    outH = outH * d00;
    const double ConstG = Const  * (jacobian);
-
+   double Hd = 0.0;
+   double Gt = 0.0;
 
       // MatrixVector multiplication
       for (int i = 0; i < 3; i++)
@@ -790,11 +821,18 @@ void Solver::CalculateNearIntExact(std::vector<Vertex*> sourcesNodes, Face* elem
         }
         if (element->m_bd)
         {
-          const double q = element->m_q[i];
-          #pragma omp atomic
-          m_Gt[{source->m_id, 0}] += q * ConstG * outG[{i, 0}];
+         double q = element->m_q[i];
+
+          //const double q = element->m_q[i];
+            #pragma omp atomic
+             m_Gt[{source->m_id, 0}] += q * ConstG *outG[{i, 0}];
+            //m_Gt[{source->m_id, 0}] += 1.0;
+            
+          //m_Gt[{source->m_id, 0}] += outG[{i, 0}];
         }
       }
+
+
     }
   
 

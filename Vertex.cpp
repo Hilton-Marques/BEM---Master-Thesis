@@ -22,7 +22,7 @@ double Vertex::calculateSolidAngle()
 
   // just for normal inside the surface (the value should negativate for another orientatnion)
   // Or u could subtract by 4* Pi and get the integer part
-  
+  int genus = 1;
   return -(2 * M_PI - fi );
 
 

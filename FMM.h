@@ -12,6 +12,7 @@
 #include <iostream>
 #include <stack>
 #include <ctime>
+#include <fstream>
 
 class FMM
 {
@@ -19,7 +20,7 @@ public:
 
 	FMM();
 	~FMM();
-	FMM(Solid* solid, int n, int ng, int nc, int field);
+	FMM(Solid* solid, int n, int ng, int nc, int field, std::ofstream* fw);
 	std::vector<Vertex*> getLeafNodesFromElements(std::vector<Face*> adjacentElements);
 	std::vector<Face*> getFarElements(Face* element);
 	std::vector< std::vector<Face*> > *m_elementsLevel;
@@ -27,6 +28,7 @@ public:
 	void checkWithConventionalBemH(Solid* solid, std::vector<Face*> elements);
 	Matrix computeBvector(double & erro);
 	Matrix matrixVectorMulti(Matrix &x);
+	Matrix getHarmonicTemperature();
 	std::stack<clock_t> m_tictoc_stack;
 	int m_nLMax;
 	int m_nTotalVerts;
@@ -53,7 +55,7 @@ public:
 	void toc();
 	Matrix Gt(Solid* solid, std::vector<Face*> elements);
 	Matrix Hd(Solid* solid, std::vector<Face*> elements);
-
+	std::ofstream* m_fw;
 	};
 
 

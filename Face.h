@@ -76,7 +76,7 @@ public:
     std::vector<Face*> getChildrenElement();
     double getRadius(double fac);
     void buildConcaveAdjacency(std::vector<Face*> & range_elements, double fac);
-
+    std::vector<double> Gt;
     ~Face();
 
     
