@@ -284,6 +284,8 @@ void Solver::CalculateNearInt(std::vector<Vertex*> sourcesNodes, Face* element)
 
 }
 
+
+
 void Solver::CalculateFarInt(std::vector<Vertex*> sourcesNodes, Face* element)
 {
     std::vector<Face*> grangranChildrenElement;
@@ -333,6 +335,7 @@ void Solver::CalculateMMT(Face* element)
                         id = getPos(n - nc, m - mc);
                         if ( id > -1)
                         {
+                            //int check = getPos(nc, mc);
                             element->m_MEG[count] = element->m_MEG[count] + R[getPos(nc, mc)] * child->m_MEG[id];
                             element->m_MEH[count] = element->m_MEH[count] + R[getPos(nc, mc)] * child->m_MEH[id];
                             

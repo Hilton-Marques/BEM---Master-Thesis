@@ -52,11 +52,11 @@ FMM::FMM(Solid* solid, int N, int NG, int Nc, int field, std::ofstream* fw) {
 
 	double err;
 	m_b = computeBvector(err);
-
-
-	std::cout.precision(15);
+	// std::cout.precision(15);
 	std::cout << err << "\n";
-	std::cout << solid->m_nPts;
+	//std::cout << solid->m_nPts;
+	return;
+
 	prepareForGMRES();
 	GMRES gmres(this);
 	m_x = gmres.Solver(m_b);
@@ -284,18 +284,25 @@ Matrix FMM::computeBvector(double& erro)
 			Face* element = elements[i];
 			std::vector<Face*> adjacentElements = element->getAdjacentElements();
 			std::vector<Vertex*> sourceVertexs = getLeafNodesFromElements(adjacentElements);
+			std::sort(sourceVertexs.begin(), sourceVertexs.end());
 			std::vector<Face*> childrenElement;
 			element->getLeafElements(&childrenElement);
 			//element->setFMMSizes(m_tot);
 
 			for (Face* child : childrenElement)
 			{
+				std::vector<Vertex*> medianVertexs;
+				std::vector<Vertex*> closeVertexs = getLeafNodesFromElements(child->getAdjacentElements());
+				std::sort(closeVertexs.begin(), closeVertexs.end());
+				std::set_difference(sourceVertexs.begin(), sourceVertexs.end(), closeVertexs.begin(), closeVertexs.end(), std::inserter(medianVertexs, medianVertexs.begin()));
+
 				/*for (Vertex* source : sourceVertexs)
 				{
 					source->m_closeElements.push_back(child);
 				}*/
-				//m_solver->CalculateNearInt(sourceVertexs, child);
-				m_solver->CalculateNearIntExact(sourceVertexs, child);
+				m_solver->CalculateNearInt(medianVertexs, child);
+
+				m_solver->CalculateNearIntExact(closeVertexs, child);
 				// Integrate Expansion
 				m_solver->CalculateME(child);
 				//child->m_collectVertexes.insert(child->m_collectVertexes.end(), sourceVertexs.begin(), sourceVertexs.end());
@@ -473,7 +480,7 @@ Matrix FMM::computeBvector(double& erro)
 				}
 			}
 		}	
-	//toc();
+	toc();
 	Matrix bFMM = m_solver->m_Gt - m_solver->m_Hd;
 	//Matrix errHd = m_solver->m_Hd - Hd;
 	//Matrix errGt = m_solver->m_Gt - Gt;
@@ -488,11 +495,13 @@ Matrix FMM::computeBvector(double& erro)
 	//std::cout << err.norm() << "\n";
 	//std::cout << bFMM.norm() << "\n";
 	// Erro para  Hd - Gt
-	//double erroFMM = bFMM.norm() / m_solver->m_Hd.norm();
+	double erroFMM = bFMM.norm() / m_solver->m_Hd.norm();
 	//double erroBEM = bBEM.norm() / Hd.norm();
 	//std::cout << m_solid->m_nPts << "\n";
 	//std::cout << "  "<< erroFMM << "\n";
-	//*m_fw<< "  " << erroFMM << "\n";
+	*m_fw<< "  " << erroFMM << "\n";
+	//*m_fw << m_solid->m_nPts << "\n";
+	m_fw->flush();
 	//std::cout << erroBEM << "\n";
 
 	erro = bFMM.norm() / m_solver->m_Hd.norm();
@@ -782,6 +791,8 @@ double FMM::trivialField(double x, double y, double z)
 		return pow(x, 2) + pow(y, 2) - 2 * pow(z, 2);
 	case 2:
 		return (x * y * z);
+	case 4:
+		return (15 * pow(x, 2) * pow(y, 2) * z - 5 * pow(x, 2) * pow(z, 3) - 5 * pow(y, 2) * pow(z, 3) + pow(z, 5));
 	}
 
 	//return x+y;	
@@ -813,6 +824,12 @@ double FMM::trivialGrad(double x, double y, double z, Point& n)
 		Point grad_cubic(y * z, x * z, x * y);
 		return grad_cubic * n;
 	}
+	case 4:
+	{
+		Point grad_quintic(30 * x * pow(y, 2) * z - 10 * x * pow(z, 3), 30 * pow(x, 2) * y * z - 10 * y * pow(z, 3),
+			15 * pow(x, 2) * pow(y, 2) - 15 * pow(x, 2) * pow(z, 2) - 15 * pow(y, 2) * pow(z, 2) + 5 * pow(z, 4));
+		return grad_quintic * n;
+	}
 	}
 	//Point grad(1, 1, 1);
 	//Point grad(1, 1, 0);
@@ -824,7 +841,7 @@ double FMM::trivialGrad(double x, double y, double z, Point& n)
 
 void FMM::changeBoundaryCondition(std::vector<Vertex*> points, std::vector<Face*> elements)
 {
-	for (int i = 0; i < 700; i++)
+	for (int i = 0; i < points.size(); i++)
 	{
 		auto pt = points[i];
 		pt->m_u = trivialField(pt->m_coord.m_x, pt->m_coord.m_y, pt->m_coord.m_z);
@@ -860,9 +877,9 @@ void FMM::changeBoundaryCondition(std::vector<Vertex*> points, std::vector<Face*
 void FMM::toc()
 {
 	m_fw->precision(15);
-	std::cout << " "
+	/*std::cout << " "
 		<< ((double)(clock() - m_tictoc_stack.top())) / CLOCKS_PER_SEC
-		<< std::endl;
+		<< std::endl;*/
 	*m_fw << " "
 		<< ((double)(clock() - m_tictoc_stack.top())) / CLOCKS_PER_SEC
 		<< std::endl;

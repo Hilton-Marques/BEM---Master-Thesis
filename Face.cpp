@@ -573,8 +573,8 @@ void Face::buildConcaveAdjacency(std::vector<Face*>& range_elements, double fac)
 Face::~Face()
 {
   // reset is doing the job
-    //delete[] m_MEG;
-    //delete[] m_MEH;
+    delete[] m_MEG;
+    delete[] m_MEH;
 }
 
 

@@ -77,7 +77,8 @@ void RTable::setSizeRTable(const int& N)
 
 void RTable::setSizeRecTableR(const int& N)
 {
-    m_NR = 2*N + 1;
+    //m_NR = 2*N + 1;
+    m_NR = N;
     m_totNR = (m_NR + 2) * (m_NR + 1) * 0.5;
     m_RecRy = new std::complex<double>[m_totNR];
     m_RecRyFull = new std::complex<double>[(m_NR+1)* (m_NR+1)];

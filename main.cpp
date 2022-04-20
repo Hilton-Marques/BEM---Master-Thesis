@@ -21,6 +21,7 @@
 extern const double M_PI = atan(1) * 4;
 extern const double Const = 1 / (4 * M_PI) ;
 
+
 void buildMotherMesh(std::vector<Vertex*>& vertices, 
                     std::vector<Edge*>& edges, 
                     std::vector<Face*>& elements,
@@ -115,102 +116,114 @@ void BuildConcaveAdjacency(std::vector<Face*>& elements, double fac)
     }
 }
 
-int main() {
-    std::string fileName = "entradaToro.txt";
-    std::vector<Point> coords;
-    std::vector<std::vector<int>> inc;
-    ReadInput input(fileName, coords, inc);
-    const int nPts = coords.size();
-    const int nEl = inc.size();
-    const int nEdges = nPts + nEl - 2;
-    const int nHeds = 2 * nEdges;
-    std::ofstream fw("output.txt", std::ofstream::out);
-    std::vector<Vertex*> vertexs(nPts);
-    std::vector<Face*> elements(nEl);
-    std::vector<Edge*> edges;
-    std::vector<HalfEdge*> heds;
-    std::vector<Vertex*> vertexsBd(1);
-    double concave_fac_radius = 1.0;
-    buildMotherMesh(vertexs, edges, elements, heds, coords, inc);
-    BuildConcaveAdjacency(elements, concave_fac_radius);
-    // start FMM
-    int nL = 7;
-    bool concave_allow = true;
-    
-    Solid solid(vertexs, edges, heds, elements, nL, vertexsBd, concave_allow, concave_fac_radius);
-    // Level
-
-    int N = 10; // truncation term
-    int NG = 11; // gauss quadrature
-    int Nc = 2; // level of adjacency
-
-    FMM fmm( & solid, N, NG, Nc, 1,&fw);
-
-    return 0;
-
-
-}
-
+//
 //int main() {
-//  std::string fileName = "entradaToro.txt";
-//  std::vector<Point> coords;
-//  std::vector<std::vector<int>> inc;
-//  ReadInput input(fileName, coords, inc);
-//  const int nPts = coords.size();
-//  const int nEl = inc.size();
-//  const int nEdges = nPts + nEl - 2;
-//  const int nHeds = 2* nEdges;
-//  //open file for writing
-//  std::ofstream fw("output.txt", std::ofstream::out);
-//int NG = 12;
+//    std::string fileName = "entradaConcaveInternal.txt";
+//    std::vector<Point> coords;
+//    std::vector<std::vector<int>> inc;
+//    ReadInput input(fileName, coords, inc);
+//    const int nPts = coords.size();
+//    const int nEl = inc.size();
+//    const int nEdges = nPts + nEl - 2;
+//    const int nHeds = 2 * nEdges;
+//    std::ofstream fw("output.txt", std::ofstream::out);
+//    std::vector<Vertex*> vertexs(nPts);
+//    std::vector<Face*> elements(nEl);
+//    std::vector<Edge*> edges;
+//    std::vector<HalfEdge*> heds;
+//    std::vector<Vertex*> vertexsBd(1);
+//    double concave_fac_radius = 1.7;
+//    buildMotherMesh(vertexs, edges, elements, heds, coords, inc);
+//    BuildConcaveAdjacency(elements, concave_fac_radius);
+//     //start FMM
+//    int nL = 6;
+//    bool concave_allow = true;
+//    
+//    Solid solid(vertexs, edges, heds, elements, nL, vertexsBd, concave_allow, concave_fac_radius);
+//    // Level
 //
-//std::vector<std::string> fields = { std::string("linear"), std::string("quadratico"), std::string("cubic") };
+//    int N = 2; // truncation term
+//    int NG = 11; // gauss quadrature
+//    int Nc = 3; // level of adjacency
 //
-//for (int field = 0; field < 3; field++)
-//{
-//    std::cout << "field" << fields[field] << "\n";
-//    fw << "field" << fields[field] << "\n";
-//    fw.precision(15);
-//    for (int Nc = 4; Nc < 5; Nc++)
-//    {
-//        std::cout << "Nc  " << Nc << "\n";
-//        fw << "Nc  " << Nc << "\n";
-//
-//        int nLmin = 2 + Nc - 1;
-//        int nL = nLmin;
-//        for (int j = nL; j < 8; j++)
-//        {
-//            nL++;
-//            nL = 8;
-//            std::cout << "nivel" << nL << "\n";
-//            fw << "nivel" << nL << "\n";
-//
-//            for (int i = 2; i < 11; i = i + 2)
-//            {
-//                std::vector<Vertex*> vertexs(nPts);
-//                std::vector<Face*> elements(nEl);
-//                std::vector<Edge*> edges;
-//                std::vector<HalfEdge*> heds;
-//                std::vector<Vertex*> vertexsBd(1);
-//                double concave_fac_radius = 1.0;
-//                buildMotherMesh(vertexs, edges, elements, heds, coords, inc);
-//                BuildConcaveAdjacency(elements, concave_fac_radius);
-//                // start FMM
-//                bool concave_allow = false;
-//
-//                Solid solid(vertexs, edges, heds, elements, nL, vertexsBd, concave_allow, concave_fac_radius);
-//
-//                int N = i;
-//                FMM fmm(&solid, N, NG, Nc, field, &fw);
-//
-//
-//            }
-//        }
-//    }
-//}
-//    //fmm.showB();
-//     //fmm.showX();
+//    FMM fmm( & solid, N, NG, Nc, 0,&fw);
 //
 //    return 0;
-//}
 //
+//
+//}
+
+
+int main() {
+  
+  std::string fileName = "entradaToro.txt";
+  std::vector<Point> coords;
+  std::vector<std::vector<int>> inc;
+  ReadInput input(fileName, coords, inc);
+  const int nPts = coords.size();
+  const int nEl = inc.size();
+  const int nEdges = nPts + nEl - 2;
+  const int nHeds = 2* nEdges;
+  //open file for writing
+  std::ofstream fw("teste_tetra.txt", std::ofstream::out);
+int NG = 11;
+
+std::vector<std::string> fields = { std::string("linear"), std::string("quadratico"), std::string("cubic") , std::string("quartic"),std::string("quintic") };
+
+for (int field = 0; field < 5; field++)
+{
+    std::cout << "field" << fields[field] << "\n";
+    fw << "field" << fields[field] << "\n";
+    fw.precision(15);
+    for (int Nc = 1; Nc < 4; Nc++)
+    {
+        std::cout << "Nc  " << Nc << "\n";
+        fw << "Nc  " << Nc << "\n";
+        fw.flush();
+
+        int nLmin = 2 + Nc - 1;
+        int nL = 1;
+        int nedges = 48;
+        for (int j = nL; j < 11; j++)
+        {
+            nL++;
+            //nL = 10;
+            std::cout << "nivel" << nL << "\n";
+            fw << "nivel" << nL << "\n";
+            fw.flush();
+            for (int i = 2; i < 11; i = i + 2)
+            {
+                i = 10;
+                std::vector<Vertex*> vertexs(nPts);
+                std::vector<Face*> elements(nEl);
+                std::vector<Edge*> edges;
+                std::vector<HalfEdge*> heds;
+                std::vector<Vertex*> vertexsBd(1);
+                double concave_fac_radius = 1.7; //1.0
+                buildMotherMesh(vertexs, edges, elements, heds, coords, inc);
+                BuildConcaveAdjacency(elements, concave_fac_radius);
+                // start FMM
+                bool concave_allow = false;
+                int N = i;
+                {
+                    
+                    Solid solid(vertexs, edges, heds, elements, nL, vertexsBd, concave_allow, concave_fac_radius);
+                    //int value = solid.m_nEdges - nedges;
+                    //nedges = solid.m_nEdges;
+                    
+                    FMM fmm(&solid, N, NG, Nc, field, &fw);
+                    //delete(solid);
+                    //delete(fmm);
+                }
+            }
+        }
+    }
+}
+
+    //fmm.showB();
+     //fmm.showX();
+
+    return 0;
+}
+
+

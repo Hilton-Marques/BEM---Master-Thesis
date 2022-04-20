@@ -71,8 +71,8 @@ Solid::~Solid()
     }
     for (int i = 0; i < m_elements.size(); i++)
     {
-      //Face* face = m_elements[i];
-      //delete face;
+      Face* face = m_elements[i];
+      delete face;
     }
 }
 
